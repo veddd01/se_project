@@ -175,8 +175,6 @@ def health():
 
 
 if __name__ == '__main__':
-    # Initialize database on startup
-    init_database()
-    print("✅ Database initialized successfully!")
+    app.run()
 
-    app.run(debug=True, port=5000)
+
