@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+venv.bak/
+
+# Databases (do NOT upload these)
+*.db
+creative_registry.db
+registry.db
+
+# Keys (very important)
+*.pem
+private.pem
+public.pem
+
+# Streamlit cache
+.streamlit/
+
+# System files
+.DS_Store
