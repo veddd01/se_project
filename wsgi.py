@@ -17,7 +17,6 @@ except Exception as e:
     sys.stderr.flush()
     # re-raise so gunicorn fails loudly (you'll see full traceback)
     raise
-
 # Attempt to initialize DB and log any exceptions
 try:
     print("wsgi.py: calling init_database()", file=sys.stderr)
