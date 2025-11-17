@@ -2,6 +2,9 @@ from flask import Flask, render_template, jsonify, request
 import sqlite3
 import json
 from datetime import datetime
+import traceback
+import sys
+
 
 app = Flask(__name__)
 DB_NAME = "creative_registry.db"
@@ -49,27 +52,33 @@ def get_db_connection():
 
 @app.route('/')
 def index():
-    """Main page displaying all registered works"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Get all works
-    cursor.execute('SELECT * FROM registry ORDER BY created_at DESC')
-    works = cursor.fetchall()
-    
-    # Get statistics
-    cursor.execute('SELECT COUNT(*) as total FROM registry')
-    total_works = cursor.fetchone()['total']
-    
-    cursor.execute('SELECT work_type, COUNT(*) as count FROM registry GROUP BY work_type')
-    type_stats = cursor.fetchall()
-    
-    conn.close()
-    
-    return render_template('index.html', 
-                         works=works, 
-                         total_works=total_works,
-                         type_stats=type_stats)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get all works
+        cursor.execute('SELECT * FROM registry ORDER BY created_at DESC')
+        works = cursor.fetchall()
+
+        # Get statistics
+        cursor.execute('SELECT COUNT(*) as total FROM registry')
+        total_works = cursor.fetchone()['total']
+
+        cursor.execute('SELECT work_type, COUNT(*) as count FROM registry GROUP BY work_type')
+        type_stats = cursor.fetchall()
+
+        conn.close()
+
+        return render_template('index.html',
+                             works=works,
+                             total_works=total_works,
+                             type_stats=type_stats)
+    except Exception:
+        # Print full traceback to stderr (Railway will show this in Deploy Logs)
+        traceback.print_exc(file=sys.stderr)
+        # Return a clear 500 page (optional)
+        return "Internal Server Error — check deploy logs for traceback", 500
+
 
 @app.route('/work/<int:work_id>')
 def work_detail(work_id):
@@ -160,9 +169,14 @@ def stats():
                          type_stats=type_stats,
                          top_creators=top_creators,
                          license_stats=license_stats)
+@app.route('/__health__')
+def health():
+    return {"status": "ok"}, 200
+
 
 if __name__ == '__main__':
     # Initialize database on startup
     init_database()
     print("✅ Database initialized successfully!")
+
     app.run(debug=True, port=5000)
