@@ -1,53 +1,150 @@
-# se_project
+# Creative Work Timestamp & Ownership Registry
 
-## Creative Work Timestamp & Ownership Registry
+A full-stack application for registering and verifying creative works using cryptographic fingerprints, digital signatures, and similarity detection.
 
-A full-stack system for registering, timestamping, and verifying ownership of creative content. Creators use a local Streamlit dashboard to fingerprint and RSA-sign their work; a separate Flask site lets anyone browse and search the resulting public registry.
+## Overview
 
-## 🔐 Features
+The project provides two local interfaces backed by the same SQLite database:
 
-- Register creative works with cryptographic timestamps
-- Generate SimHash fingerprints & detect near-duplicate/plagiarized content
-- Issue RSA-signed ownership certificates
-- Verify certificates using digital signature validation
-- Browse and search a public registry of all registered works
-- Creator dashboard (Streamlit) for registration, verification, plagiarism checks, and backups
-- Public-facing read-only website (Flask) for viewing the registry
+- **Creator dashboard:** Streamlit application for registering works, generating fingerprints, signing certificates, verifying ownership, and checking for similar works.
+- **Public registry:** Flask application for browsing and searching registered works.
 
-## 🛠 Tech stack
+The implementation uses SHA-256 fingerprints, SimHash similarity detection, and RSA-2048 signatures. The registry database and RSA key files are intentionally excluded from version control.
 
-- **Creator dashboard:** Streamlit (`cr_2.py`)
-- **Public website:** Flask (`app.py`), served via Gunicorn/WSGI in production
-- **Database:** SQLite (`creative_registry.db`), shared locally between both apps
-- **Security:** RSA-2048 (PKCS#1 v1.5) signatures, SHA-256 hashing, SimHash similarity fingerprinting
+## Features
 
-## 🏗 How it fits together
+- Register creative works with timestamps and metadata
+- Generate SHA-256 fingerprints and SimHash values
+- Detect near-duplicate content using SimHash distance
+- Generate and verify RSA-2048 signatures
+- Create downloadable ownership certificates
+- Browse and search the public registry
+- Maintain registry data in SQLite
 
-`cr_2.py` and `app.py` are two independent apps that share one local `creative_registry.db` file:
+## Tech Stack
 
-1. Run `cr_2.py` (Streamlit) locally to register a work — it hashes the content, checks for near-duplicates, signs the result with `private.pem`, and writes a row to `creative_registry.db`.
-2. Run `app.py` (Flask) to browse/search the same database — it's read-only and never writes to the registry.
+- **Python**
+- **Streamlit** — creator dashboard
+- **Flask** — public registry
+- **SQLite** — local persistence
+- **PyCryptodome** — RSA/AES cryptographic operations
+- **SimHash** — similarity detection
+- **Gunicorn** — WSGI serving
 
-Both need to point at the same `creative_registry.db` and the same keypair to work together.
+## Architecture
 
-## 🚀 Setup
-
-```bash
-pip install -r requirements.txt streamlit
-
-# Generate a keypair from the dashboard sidebar the first time, then:
-streamlit run cr_2.py     # creator dashboard: register, verify, check plagiarism
-python app.py              # public registry site (or: gunicorn wsgi:application)
+```text
+                 ┌──────────────────────┐
+                 │   Creator Dashboard  │
+                 │      Streamlit       │
+                 └──────────┬───────────┘
+                            │
+                 register / verify / check
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │   SQLite Registry    │
+                 │ creative_registry.db │
+                 └──────────┬───────────┘
+                            │
+                       read / search
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │   Public Registry    │
+                 │        Flask         │
+                 └──────────────────────┘
 ```
 
-`private.pem`, `public.pem`, and `creative_registry.db` are gitignored on purpose — keep them out of version control and provision them separately for any deployment.
+For registration, the application derives a content fingerprint, computes a SimHash value for similarity checks, signs the fingerprint with an RSA private key, and stores the resulting registry record. The public Flask application reads the shared registry without performing registration writes.
 
-## ⚠️ Known limitations
+## Project Structure
 
-- **Identity isn't verified.** Anyone can type any name into the "Creator" field — the registry currently proves *who submitted first*, not *who actually made the work*.
-- **Certificates sign only the content fingerprint**, not the creator/title/license/timestamp fields stored alongside it — those fields aren't yet cryptographically bound to the signature.
-- **SQLite is a single local file.** It works well for local/demo use, but isn't suited to serverless deployment (e.g. Vercel), where the filesystem doesn't persist writes between requests. A hosted database is needed for a live, always-current public deployment.
+```text
+se_project/
+├── app.py
+├── cr_2.py
+├── requirements.txt
+├── wsgi.py
+├── vercel.json
+├── templates/
+├── .gitignore
+└── README.md
+```
 
-## 🎯 Use case
+## Installation
 
-Perfect for authors, developers, designers, musicians, and researchers who want a simple way to timestamp and prove authorship of digital content.
+Clone the repository and install the dependencies:
+
+```bash
+git clone https://github.com/veddd01/se_project.git
+cd se_project
+python -m venv .venv
+```
+
+Activate the virtual environment.
+
+**Windows**
+
+```bash
+.venv\Scripts\activate
+```
+
+**macOS/Linux**
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+### 1. Start the creator dashboard
+
+```bash
+streamlit run cr_2.py
+```
+
+Use the dashboard to generate an RSA keypair if required, register works, verify certificates, and perform similarity checks.
+
+### 2. Start the public registry
+
+In a second terminal:
+
+```bash
+python app.py
+```
+
+The Flask application serves the read-only registry locally.
+
+For WSGI deployment, the repository also includes `wsgi.py` and Gunicorn support.
+
+## Security Notes
+
+- `private.pem` and `public.pem` are ignored by Git.
+- SQLite database files are ignored by Git.
+- Do not commit private keys, credentials, or generated registry data.
+- The current implementation is intended for local/demo use rather than a production identity-verification service.
+
+## Limitations
+
+- Creator identity is user-supplied and is not independently verified.
+- RSA signatures currently cover the generated content fingerprint rather than every metadata field.
+- SQLite is appropriate for local/demo use but is not a substitute for a production hosted database.
+
+## Future Improvements
+
+- Bind all certificate metadata to the signed payload
+- Add authenticated creator identities
+- Move persistence to a hosted relational database
+- Expand automated tests for cryptographic and registry workflows
+- Add deployment-oriented configuration and observability
+
+## Author
+
+**Vedant** — [GitHub](https://github.com/veddd01)
